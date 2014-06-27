@@ -4,15 +4,13 @@ import (
 	"sync"
 )
 
-var (
-	ResponseChannelBufferSize = 100
-)
-
+// A topic coordinates the publishing and distribution
+// of messages.
 type Topic struct {
 	Name            string
 	Subscriptions   map[string]*Subscription
 	SubscriberMutex sync.Mutex
-	State           map[string]*Message
+	Data            map[string]*Message
 }
 
 func CreateTopic(name string) *Topic {
@@ -24,6 +22,7 @@ func CreateTopic(name string) *Topic {
 	}
 }
 
+// Publishes a message to all subscribers.
 func (topic *Topic) Publish(message *Message) {
 	for _, subscription := range topic.Subscriptions {
 		go func() {
@@ -32,12 +31,18 @@ func (topic *Topic) Publish(message *Message) {
 	}
 }
 
+// Publishes a message and stores it in the topic.
 func (topic *Topic) RecordAndPublish(message *Message) {
-	if previousMessage, ok := topic.State[message.id]; ok {
+	// If we're replacing a message with the same id,
+	// we want to cancel it's expiration so that it doesn't
+	// interfere with the new one.
+	if previousMessage, ok := topic.Data[message.id]; ok {
 		previousMessage.CancelExpiration()
 	}
-	topic.State[message.id] = message
+	topic.Data[message.id] = message
 	topic.Publish(message)
+
+	// Always queue messages up for deletion.
 	message.QueueExpiration(topic)
 }
 
@@ -51,20 +56,16 @@ func (topic *Topic) GetSubscription(name string) *Subscription {
 		subscription.ExtendExpiration()
 		return subscription
 	}
-	subscription := &Subscription{
-		name,
-		topic,
-		make(chan *Message, ResponseChannelBufferSize),
-		make(chan string),
-	}
+
+	subscription := NewSubscription(name, topic)
 	topic.Subscriptions[name] = subscription
 
 	// Expire subscription after a TTL.
 	subscription.QueueExpiration()
 
-	// Fetch the current state for the topic if this is
+	// Fetch the current state for the topic if this is the
 	// first session.
-	go subscription.FetchState()
+	go subscription.FetchData()
 
 	return subscription
 }
