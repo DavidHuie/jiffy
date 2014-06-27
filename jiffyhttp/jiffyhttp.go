@@ -13,17 +13,13 @@ const (
 	SessionTimeout = 20 * time.Second
 )
 
-var (
-	registry *jiffy.Registry
-)
-
 func subscriptionHandler(response http.ResponseWriter, request *http.Request) {
 	request.ParseForm()
 
 	topicName := request.Form.Get("topic")
 	sessionID := request.Form.Get("id")
 
-	topic := registry.GetTopic(topicName)
+	topic := jiffy.GetTopic(topicName)
 	subscription := topic.GetSubscription(sessionID)
 
 	log.Printf("Subscription request: Id=%v TopicName=%v", sessionID, topicName)
@@ -54,15 +50,11 @@ func subscriptionHandler(response http.ResponseWriter, request *http.Request) {
 func publishHandler(response http.ResponseWriter, request *http.Request) {
 	request.ParseForm()
 	topicName := request.Form.Get("topic")
-	topic := registry.GetTopic(topicName)
+	topic := jiffy.GetTopic(topicName)
 	messagePayload := request.Form.Get("message")
 	message := jiffy.NewMessage("asdfjk;l", messagePayload)
 	topic.RecordAndPublish(message)
 	response.WriteHeader(http.StatusOK)
-}
-
-func init() {
-	registry = jiffy.CreateRegistry()
 }
 
 func main() {
