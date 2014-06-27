@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/DavidHuie/jiffy"
 )
 
 const (
@@ -12,7 +14,7 @@ const (
 )
 
 var (
-	registry *Registry
+	registry *jiffy.Registry
 )
 
 func subscriptionHandler(response http.ResponseWriter, request *http.Request) {
@@ -54,13 +56,13 @@ func publishHandler(response http.ResponseWriter, request *http.Request) {
 	topicName := request.Form.Get("topic")
 	topic := registry.GetTopic(topicName)
 	messagePayload := request.Form.Get("message")
-	message := NewMessage("asdfjk;l", messagePayload)
+	message := jiffy.NewMessage("asdfjk;l", messagePayload)
 	topic.RecordAndPublish(message)
 	response.WriteHeader(http.StatusOK)
 }
 
 func init() {
-	registry = CreateRegistry()
+	registry = jiffy.CreateRegistry()
 }
 
 func main() {
