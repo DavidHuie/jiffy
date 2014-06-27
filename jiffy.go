@@ -1,67 +1,69 @@
 package main
 
-type Item struct {
-	Name    string
-	Watches map[string]*Watch
-	State   map[string]*Event
-}
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+	"time"
+)
 
-type Watch struct {
-	Name          string
-	Item          *Item
-	ClientChannel chan *Event
-}
+const (
+	SessionTimeout = 20 * time.Second
+)
 
-type Event struct {
-	Name    string
-	Payload []byte
-}
+var (
+	registry *Registry
+)
 
-type Registry struct {
-	Items map[string]*Item
-}
+func subscriptionHandler(response http.ResponseWriter, request *http.Request) {
+	request.ParseForm()
 
-func CreateItem(name string) *Item {
-	return &Item{
-		name,
-		make(map[string]*Watch),
-		make(map[string]*Event),
+	sessionID := request.Form.Get("id")
+	topicName := request.Form.Get("topic")
+	topic := registry.GetTopic(topicName)
+	subscription := topic.GetSubscription(sessionID)
+
+	// Create a ticker that'll notify us when it's time to timeout
+	// the session.
+	timeoutTicker := time.NewTicker(SessionTimeout)
+
+	select {
+	case <-timeoutTicker.C:
+		response.WriteHeader(http.StatusOK)
+		return
+	case event := <-subscription.ResponseChannel:
+		// Batching would be good to have here, otherwise we'll
+		// have to perform one request per event.
+		jsonEvent, err := json.Marshal(event)
+		if err != nil {
+			log.Println(err)
+			response.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		response.Write(jsonEvent)
 	}
 }
 
-func (item *Item) Publish(event *Event) {
-	for _, watch := range item.Watches {
-		go func() {
-			watch.ClientChannel <- event
-		}()
-	}
+// Publishes a message
+func publishHandler(response http.ResponseWriter, request *http.Request) {
+	request.ParseForm()
+	topicName := request.Form.Get("topic")
+	topic := registry.GetTopic(topicName)
+	messagePayload := request.Form.Get("message")
+	message := NewMessage("asdfjk;l", messagePayload)
+	topic.RecordAndPublish(message)
+	response.WriteHeader(http.StatusOK)
 }
 
-func (item *Item) RecordAndPublish(event *Event) {
-	item.State[event.Name] = event
-	item.Publish(event)
+func init() {
+	registry = CreateRegistry()
 }
-
-func (item *Item) DestroyAndPublish(event *Event) {
-	delete(item.State, event.Name)
-	item.Publish(event)
-}
-
-func CreateWatch(name string, item *Item, channel chan *Event) *Watch {
-	watch := &Watch{name, item, channel}
-	item.Watches[name] = watch
-	return watch
-}
-
-// Session lifetime
-// * Client connects
-// * Client creates Item if it doesn't already exist
-// * Client creates a Watch on the item
-// * Client receives a a payload consisting of real-time state
-//   of the item.
-// * When the client emits an event, it gets forwarded to
-//   the item and is fanned out to all Watches.
 
 func main() {
-
+	http.HandleFunc("/subscribe", subscriptionHandler)
+	http.HandleFunc("/publish", publishHandler)
+	err := http.ListenAndServe(":3000", nil)
+	if err != nil {
+		panic(err)
+	}
 }
