@@ -18,10 +18,13 @@ var (
 func subscriptionHandler(response http.ResponseWriter, request *http.Request) {
 	request.ParseForm()
 
-	sessionID := request.Form.Get("id")
 	topicName := request.Form.Get("topic")
+	sessionID := request.Form.Get("id")
+
 	topic := registry.GetTopic(topicName)
 	subscription := topic.GetSubscription(sessionID)
+
+	log.Printf("Subscription request: Id=%v TopicName=%v", sessionID, topicName)
 
 	// Create a ticker that'll notify us when it's time to timeout
 	// the session.
@@ -41,6 +44,7 @@ func subscriptionHandler(response http.ResponseWriter, request *http.Request) {
 			return
 		}
 		response.Write(jsonEvent)
+		return
 	}
 }
 

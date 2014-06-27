@@ -7,7 +7,13 @@ import (
 )
 
 const (
-	MessageTTL = 60 * time.Second
+	MessageTTL                = 60 * time.Second
+	SubscriptionTTL           = 60 * time.Second
+	ResponseChannelBufferSize = 100
+)
+
+var (
+	Rand = rand.Rand{}
 )
 
 type Topic struct {
@@ -26,35 +32,29 @@ func CreateTopic(name string) *Topic {
 	}
 }
 
-func (topic *Topic) Publish(message *Message, ttl time.Duration) {
+func (topic *Topic) Publish(message *Message) {
 	for _, subscription := range topic.Subscriptions {
 		go func() {
 			subscription.ResponseChannel <- message
 		}()
 	}
-	// Expire message after TTL.
-	go func() {
-		ticker := time.NewTicker(ttl * time.Second)
-		<-ticker.C
-		delete(topic.State, message.id)
-	}()
 }
 
 func (topic *Topic) RecordAndPublish(message *Message) {
+	if previousMessage, ok := topic.State[message.id]; ok {
+		previousMessage.CancelExpiration()
+	}
 	topic.State[message.id] = message
-	topic.Publish(message, MessageTTL)
+	topic.Publish(message)
+	message.QueueExpiration(topic)
 }
 
 type Subscription struct {
 	Name            string
 	Topic           *Topic
 	ResponseChannel chan *Message
+	ttlChan         chan string
 }
-
-const (
-	ResponseChannelBufferSize = 100
-	SubscriptionTTL           = 60 * time.Second
-)
 
 // Creates a subscription on the topic if it doesn't exist already,
 // and returns it.
@@ -62,22 +62,20 @@ func (topic *Topic) GetSubscription(name string) *Subscription {
 	topic.SubscriberMutex.Lock()
 	defer topic.SubscriberMutex.Unlock()
 
-	// Expire subscription after TTL.
-	defer func() {
-		ticker := time.NewTicker(SubscriptionTTL)
-		<-ticker.C
-		delete(topic.Subscriptions, name)
-	}()
-
 	if subscription, ok := topic.Subscriptions[name]; ok {
+		subscription.ExtendExpiration()
 		return subscription
 	}
 	subscription := &Subscription{
 		name,
 		topic,
 		make(chan *Message, ResponseChannelBufferSize),
+		make(chan string),
 	}
 	topic.Subscriptions[name] = subscription
+
+	// Expire subscription after a TTL.
+	subscription.QueueExpiration()
 
 	// Fetch the current state for the topic if this is
 	// first session.
@@ -86,23 +84,47 @@ func (topic *Topic) GetSubscription(name string) *Subscription {
 	return subscription
 }
 
+func (subscription *Subscription) Expire() {
+	delete(subscription.Topic.Subscriptions, subscription.Name)
+}
+
+func (subscription *Subscription) QueueExpiration() {
+	go CallAfterTTL(subscription.Expire, SubscriptionTTL, subscription.ttlChan)
+}
+
+func (subscription *Subscription) ExtendExpiration() {
+	subscription.ttlChan <- "extend"
+}
+
 func (subscription *Subscription) FetchState() {
 	for _, message := range subscription.Topic.State {
 		subscription.ResponseChannel <- message
 	}
 }
 
-var (
-	Rand = rand.Rand{}
-)
-
 type Message struct {
 	id      string
 	Payload string `json:"payload"`
+	ttlChan chan string
 }
 
 func NewMessage(id, payload string) *Message {
-	return &Message{id, payload}
+	return &Message{id, payload, make(chan string)}
+}
+
+func (message *Message) QueueExpiration(topic *Topic) {
+	expirationFunction := func() {
+		delete(topic.State, message.id)
+	}
+	go CallAfterTTL(expirationFunction, MessageTTL, message.ttlChan)
+}
+
+func (message *Message) ExtendExpiration() {
+	message.ttlChan <- "extend"
+}
+
+func (message *Message) CancelExpiration() {
+	message.ttlChan <- "cancel"
 }
 
 type Registry struct {
