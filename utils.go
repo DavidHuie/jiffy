@@ -2,12 +2,14 @@ package jiffy
 
 import (
 	"fmt"
-	"log"
 	"os"
 )
 
-var Random *os.File
+var (
+	Random *os.File
+)
 
+// Generates a random UUID.
 func UUID() string {
 	b := make([]byte, 16)
 	Random.Read(b)
@@ -16,9 +18,9 @@ func UUID() string {
 }
 
 func init() {
-	f, err := os.Open("/dev/urandom")
+	var err error
+	Random, err = os.Open("/dev/urandom")
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
-	Random = f
 }
