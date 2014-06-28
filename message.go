@@ -5,7 +5,7 @@ import (
 )
 
 type Message struct {
-	Name    string
+	Name    string `json:"message"`
 	Payload string `json:"payload"`
 	ttlChan chan int
 	uuid    string

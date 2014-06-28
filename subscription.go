@@ -49,11 +49,13 @@ func (subscription *Subscription) QueueExpiration(ttl time.Duration) {
 	}
 }
 
-// Queues up all of the topic's data.
-func (subscription *Subscription) FetchData() {
+// Returns all of the topic's data.
+func (subscription *Subscription) FetchData() []*Message {
+	messages := make([]*Message, 0, len(subscription.Topic.Data))
 	for _, message := range subscription.Topic.Data {
-		subscription.ResponseChannel <- message
+		messages = append(messages, message)
 	}
+	return messages
 }
 
 // Returns true if the subscription is active on a topic.
