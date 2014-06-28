@@ -12,19 +12,31 @@ type Message struct {
 	id      string
 	Payload string `json:"payload"`
 	ttlChan chan int
+	uuid    string
 }
 
 func NewMessage(id, payload string) *Message {
-	return &Message{id, payload, make(chan int)}
+	return &Message{
+		id,
+		payload,
+		make(chan int),
+		UUID(),
+	}
 }
 
 // Queues a message for deletion from it's topic after
 // the configured TTL.
-func (message *Message) QueueExpiration(topic *Topic) {
-	expirationFunction := func() {
-		delete(topic.Data, message.id)
+func (message *Message) QueueExpiration(topic *Topic, ttl time.Duration) {
+	ticker := time.NewTicker(ttl)
+	<-ticker.C
+	topic.MessageMutex.Lock()
+	defer topic.MessageMutex.Unlock()
+	if topicMessage, ok := topic.Data[message.id]; ok {
+		// Only delete the correct message.
+		if topicMessage.uuid == message.uuid {
+			delete(topic.Data, message.id)
+		}
 	}
-	go CallAfterTTL(expirationFunction, MessageTTL, message.ttlChan)
 }
 
 // Extends a message's TTL.

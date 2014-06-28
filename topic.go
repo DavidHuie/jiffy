@@ -11,6 +11,7 @@ type Topic struct {
 	Name            string
 	Subscriptions   map[string]*Subscription
 	SubscriberMutex sync.Mutex
+	MessageMutex    sync.Mutex
 	Data            map[string]*Message
 }
 
@@ -18,6 +19,7 @@ func CreateTopic(name string) *Topic {
 	return &Topic{
 		name,
 		make(map[string]*Subscription),
+		sync.Mutex{},
 		sync.Mutex{},
 		make(map[string]*Message),
 	}
@@ -40,6 +42,7 @@ func (topic *Topic) RecordAndPublish(message *Message) {
 	if previousMessage, ok := topic.Data[message.id]; ok {
 		previousMessage.CancelExpiration()
 	}
+
 	topic.Data[message.id] = message
 	topic.Publish(message)
 
@@ -59,7 +62,8 @@ func (topic *Topic) GetSubscription(name string, ttl time.Duration) *Subscriptio
 			// If we were able to cancel successfully,
 			// just restart the expiration.
 			subscription.ttl = ttl
-			subscription.QueueExpiration()
+			subscription.QueueExpiration(ttl)
+			return subscription
 		default:
 			// We're too late
 			break
