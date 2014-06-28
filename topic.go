@@ -31,7 +31,7 @@ func CreateTopic(name string) *Topic {
 func (topic *Topic) Publish(message *Message) {
 	for _, subscription := range topic.Subscriptions {
 		go func(s *Subscription) {
-			s.ResponseChannel <- message
+			s.Publish(message)
 		}(subscription)
 	}
 }

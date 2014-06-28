@@ -29,6 +29,11 @@ func NewSubscription(name string, topic *Topic, ttl time.Duration) *Subscription
 	return subscription
 }
 
+// Publishes a message to the subscription.
+func (subscription *Subscription) Publish(message *Message) {
+	subscription.ResponseChannel <- message
+}
+
 // Deletes the subscription from its topic.
 func (subscription *Subscription) Expire() {
 	subscription.Topic.subscriptionMutex.Lock()
