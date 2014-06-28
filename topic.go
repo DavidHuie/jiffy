@@ -11,6 +11,7 @@ type Topic struct {
 	Name          string
 	Subscriptions map[string]*Subscription
 	Data          map[string]*Message
+	uuid          string
 	// Mutex for creating and destroying subscriptions.
 	subscriptionMutex sync.Mutex
 	// Mutex for creating and destroying messages.
@@ -22,6 +23,7 @@ func CreateTopic(name string) *Topic {
 		name,
 		make(map[string]*Subscription),
 		make(map[string]*Message),
+		UUID(),
 		sync.Mutex{},
 		sync.Mutex{},
 	}
@@ -36,13 +38,27 @@ func (topic *Topic) Publish(message *Message) {
 	}
 }
 
-// Publishes a message and stores it in the topic.
-func (topic *Topic) RecordAndPublish(message *Message, ttl time.Duration) {
+// Records a message to the topic's cache.
+func (topic *Topic) Record(message *Message, ttl time.Duration) {
 	topic.messageMutex.Lock()
 	defer topic.messageMutex.Unlock()
 	topic.Data[message.Name] = message
-	go topic.Publish(message)
 	go message.QueueExpiration(topic, ttl)
+}
+
+// Returns all of the topic's cached data.
+func (topic *Topic) FetchData() []*Message {
+	messages := make([]*Message, 0, len(topic.Data))
+	for _, message := range topic.Data {
+		messages = append(messages, message)
+	}
+	return messages
+}
+
+// Publishes a message and stores it in the topic.
+func (topic *Topic) RecordAndPublish(message *Message, ttl time.Duration) {
+	topic.Record(message, ttl)
+	go topic.Publish(message)
 }
 
 // Creates a subscription on the topic if it doesn't exist
@@ -66,13 +82,4 @@ func (topic *Topic) GetSubscription(name string, ttl time.Duration) *Subscriptio
 	subscription := NewSubscription(name, topic, ttl)
 	topic.Subscriptions[name] = subscription
 	return subscription
-}
-
-// Returns all of the topic's cached data.
-func (topic *Topic) FetchData() []*Message {
-	messages := make([]*Message, 0, len(topic.Data))
-	for _, message := range topic.Data {
-		messages = append(messages, message)
-	}
-	return messages
 }
