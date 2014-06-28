@@ -65,10 +65,5 @@ func (topic *Topic) GetSubscription(name string, ttl time.Duration) *Subscriptio
 
 	subscription := NewSubscription(name, topic, ttl)
 	topic.Subscriptions[name] = subscription
-
-	// Fetch the current state for the topic if this is the
-	// first session.
-	go subscription.FetchData()
-
 	return subscription
 }
