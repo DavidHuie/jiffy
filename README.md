@@ -3,12 +3,6 @@
 In-process pub/sub in Go. Use this package to add one-to-many messaging
 to your Go program.
 
-## How it works
-
-Jiffy allows consumers to subscribe to messages broadcast by topics and producers
-to publish to specific topics. Additionally, messages and subscriptions
-can be cached with TTLs.
-
 ## Getting the package
 
 ```shell
