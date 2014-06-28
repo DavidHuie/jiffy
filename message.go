@@ -4,20 +4,16 @@ import (
 	"time"
 )
 
-var (
-	MessageTTL = 60 * time.Second
-)
-
 type Message struct {
-	id      string
+	Name    string
 	Payload string `json:"payload"`
 	ttlChan chan int
 	uuid    string
 }
 
-func NewMessage(id, payload string) *Message {
+func NewMessage(name, payload string) *Message {
 	return &Message{
-		id,
+		name,
 		payload,
 		make(chan int),
 		UUID(),
@@ -29,22 +25,11 @@ func NewMessage(id, payload string) *Message {
 func (message *Message) QueueExpiration(topic *Topic, ttl time.Duration) {
 	ticker := time.NewTicker(ttl)
 	<-ticker.C
-	topic.MessageMutex.Lock()
-	defer topic.MessageMutex.Unlock()
-	if topicMessage, ok := topic.Data[message.id]; ok {
-		// Only delete the correct message.
+	topic.messageMutex.Lock()
+	defer topic.messageMutex.Unlock()
+	if topicMessage, ok := topic.Data[message.Name]; ok {
 		if topicMessage.uuid == message.uuid {
-			delete(topic.Data, message.id)
+			delete(topic.Data, message.Name)
 		}
 	}
-}
-
-// Extends a message's TTL.
-func (message *Message) ExtendExpiration() {
-	message.ttlChan <- extendTTL
-}
-
-// Cancels a message's scheduled deletion.
-func (message *Message) CancelExpiration() {
-	message.ttlChan <- cancelTTL
 }

@@ -33,8 +33,8 @@ func NewSubscription(name string, topic *Topic, ttl time.Duration) *Subscription
 
 // Deletes the subscription from its topic.
 func (subscription *Subscription) Expire() {
-	subscription.Topic.SubscriberMutex.Lock()
-	defer subscription.Topic.SubscriberMutex.Unlock()
+	subscription.Topic.subscriptionMutex.Lock()
+	defer subscription.Topic.subscriptionMutex.Unlock()
 	if subscription.Active() {
 
 	}
@@ -49,11 +49,6 @@ func (subscription *Subscription) QueueExpiration(ttl time.Duration) {
 	case <-subscription.expireChan:
 		return
 	}
-}
-
-// Cancels a queued expiration.
-func (subscription *Subscription) CancelExpiration() {
-	subscription.expireChan <- cancelTTL
 }
 
 // Queues up all of the topic's data.
