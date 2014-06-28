@@ -4,14 +4,9 @@ import (
 	"time"
 )
 
-const (
-	cancelTTL = iota
-	extendTTL
-)
-
 var (
 	registry      *Registry
-	cleanInterval = 10 * time.Minute
+	cleanInterval = time.Minute
 )
 
 // Returns a topic from the global registry.

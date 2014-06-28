@@ -4,6 +4,11 @@ import (
 	"time"
 )
 
+const (
+	cancelTTL = iota
+	extendTTL
+)
+
 var (
 	// The maximum number of messages to buffer in a subscription.
 	ResponseBufferSize = 100
