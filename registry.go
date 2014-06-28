@@ -6,8 +6,8 @@ import (
 )
 
 type Registry struct {
-	Topics        map[string]*Topic
-	NewTopicMutex sync.Mutex
+	Topics     map[string]*Topic
+	topicMutex sync.Mutex
 }
 
 func CreateRegistry() *Registry {
@@ -20,8 +20,8 @@ func CreateRegistry() *Registry {
 // Creates a topic on the registry if it doesn't exist
 // and returns it.
 func (registry *Registry) GetTopic(name string) *Topic {
-	registry.NewTopicMutex.Lock()
-	defer registry.NewTopicMutex.Unlock()
+	registry.topicMutex.Lock()
+	defer registry.topicMutex.Unlock()
 	if topic, ok := registry.Topics[name]; ok {
 		return topic
 	}
@@ -36,8 +36,8 @@ func (registry *Registry) CleanTopics(interval time.Duration) {
 		<-ticker.C
 		for topicName, topic := range registry.Topics {
 			go func(name string, topic *Topic, registry *Registry) {
-				registry.NewTopicMutex.Lock()
-				defer registry.NewTopicMutex.Unlock()
+				registry.topicMutex.Lock()
+				defer registry.topicMutex.Unlock()
 				if len(topic.Subscriptions) == 0 {
 					delete(registry.Topics, topicName)
 				}
