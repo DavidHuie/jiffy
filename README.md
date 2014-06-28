@@ -4,9 +4,9 @@ In-process pub/sub in Go.
 
 ## How it works
 
-Jiffy allows consumers to subscribe to messages broadcast to topics.
-Additionally, historical messages to topics are cached with a TTL,
-making them fetchable by a subscription at any given time.
+Jiffy allows consumers to subscribe to messages broadcast by topics and producers
+to publish to specific topics. Additionally, messages and subscriptions
+can be cached with TTLs.
 
 ## Usage
 
