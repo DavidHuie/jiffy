@@ -1,5 +1,10 @@
 package jiffy
 
+const (
+	cancelTTL = iota
+	extendTTL
+)
+
 var (
 	registry *Registry
 )

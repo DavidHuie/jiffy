@@ -2,6 +2,7 @@ package jiffy
 
 import (
 	"sync"
+	"time"
 )
 
 // A topic coordinates the publishing and distribution
@@ -48,20 +49,25 @@ func (topic *Topic) RecordAndPublish(message *Message) {
 
 // Creates a subscription on the topic if it doesn't exist
 // and returns it.
-func (topic *Topic) GetSubscription(name string) *Subscription {
+func (topic *Topic) GetSubscription(name string, ttl time.Duration) *Subscription {
 	topic.SubscriberMutex.Lock()
 	defer topic.SubscriberMutex.Unlock()
 
 	if subscription, ok := topic.Subscriptions[name]; ok {
-		subscription.ExtendExpiration()
-		return subscription
+		select {
+		case subscription.expireChan <- cancelTTL:
+			// If we were able to cancel successfully,
+			// just restart the expiration.
+			subscription.ttl = ttl
+			subscription.QueueExpiration()
+		default:
+			// We're too late
+			break
+		}
 	}
 
-	subscription := NewSubscription(name, topic)
+	subscription := NewSubscription(name, topic, ttl)
 	topic.Subscriptions[name] = subscription
-
-	// Expire subscription after a TTL.
-	subscription.QueueExpiration()
 
 	// Fetch the current state for the topic if this is the
 	// first session.

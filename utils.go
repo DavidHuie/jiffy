@@ -1,28 +1,24 @@
 package jiffy
 
 import (
-	"time"
+	"fmt"
+	"log"
+	"os"
 )
 
-const (
-	cancelTTL = iota
-	extendTTL
-)
+var Random *os.File
 
-// Calls the input function after the input TTL has passed. However,
-// the TTL is restarted if a message is received on input channel.
-func CallAfterTTL(f func(), ttl time.Duration, c chan int) {
-	ticker := time.NewTicker(ttl)
-	for {
-		select {
-		case <-ticker.C:
-			f()
-			return
-		case message := <-c:
-			if message == cancelTTL {
-				return
-			}
-			ticker = time.NewTicker(ttl)
-		}
+func UUID() string {
+	b := make([]byte, 16)
+	Random.Read(b)
+	return fmt.Sprintf("%x-%x-%x-%x-%x",
+		b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+}
+
+func init() {
+	f, err := os.Open("/dev/urandom")
+	if err != nil {
+		log.Fatal(err)
 	}
+	Random = f
 }
