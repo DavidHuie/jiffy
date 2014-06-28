@@ -1,6 +1,7 @@
 # Jiffy
 
-In-process pub/sub in Go.
+In-process pub/sub in Go. Use this package to add one-to-many messaging
+to your Go program.
 
 ## How it works
 
@@ -8,11 +9,17 @@ Jiffy allows consumers to subscribe to messages broadcast by topics and producer
 to publish to specific topics. Additionally, messages and subscriptions
 can be cached with TTLs.
 
-## Usage
+## Getting the package
+
+```shell
+$ go get github.com/DavidHuie/jiffy
+```
 
 ```go
 import "github.com/DavidHuie/jiffy"
 ```
+
+## Working with topics
 
 To gain access to a topic, fetch it by name:
 
@@ -26,7 +33,9 @@ To receive all cached messages from a topic:
 messages := topic.FetchData()
 ```
 
-Now, create a subscription by using a unique name specific to the consumer and
+## Creating subscriptions
+
+Create a subscription by using a unique name specific to the consumer and
 a TTL that will determine when the subscription is destroyed:
 
 ```go
@@ -42,6 +51,8 @@ response channel:
 ```go
 message := <-subscription.Response
 ```
+
+## Publishing messages
 
 To publish a message to the topic, first create message with a name and a
 payload:
