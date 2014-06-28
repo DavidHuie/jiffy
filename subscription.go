@@ -15,7 +15,6 @@ type Subscription struct {
 	ResponseChannel chan *Message
 	expireChan      chan int
 	uuid            string
-	ttl             time.Duration
 }
 
 func NewSubscription(name string, topic *Topic, ttl time.Duration) *Subscription {
@@ -25,7 +24,6 @@ func NewSubscription(name string, topic *Topic, ttl time.Duration) *Subscription
 		make(chan *Message, ResponseChannelBufferSize),
 		make(chan int),
 		UUID(),
-		ttl,
 	}
 	go subscription.QueueExpiration(ttl)
 	return subscription
@@ -36,7 +34,7 @@ func (subscription *Subscription) Expire() {
 	subscription.Topic.subscriptionMutex.Lock()
 	defer subscription.Topic.subscriptionMutex.Unlock()
 	if subscription.Active() {
-
+		delete(subscription.Topic.Data, subscription.Name)
 	}
 }
 

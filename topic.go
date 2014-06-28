@@ -30,9 +30,9 @@ func CreateTopic(name string) *Topic {
 // Publishes a message to all subscribers.
 func (topic *Topic) Publish(message *Message) {
 	for _, subscription := range topic.Subscriptions {
-		go func() {
-			subscription.ResponseChannel <- message
-		}()
+		go func(s *Subscription) {
+			s.ResponseChannel <- message
+		}(subscription)
 	}
 }
 
@@ -56,8 +56,7 @@ func (topic *Topic) GetSubscription(name string, ttl time.Duration) *Subscriptio
 		case subscription.expireChan <- cancelTTL:
 			// If we were able to cancel successfully,
 			// just restart the expiration.
-			subscription.ttl = ttl
-			subscription.QueueExpiration(ttl)
+			go subscription.QueueExpiration(ttl)
 			return subscription
 		default:
 			// We're too late

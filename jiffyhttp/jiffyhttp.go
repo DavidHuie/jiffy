@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"runtime"
 	"time"
 
 	"github.com/DavidHuie/jiffy"
@@ -32,16 +33,16 @@ func subscriptionHandler(response http.ResponseWriter, request *http.Request) {
 	case <-timeoutTicker.C:
 		response.WriteHeader(http.StatusOK)
 		return
-	case event := <-subscription.ResponseChannel:
+	case message := <-subscription.ResponseChannel:
 		// Batching would be good to have here, otherwise we'll
-		// have to perform one request per event.
-		jsonEvent, err := json.Marshal(event)
+		// have to perform one request per message.
+		jsonMessage, err := json.Marshal(message)
 		if err != nil {
 			log.Println(err)
 			response.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		response.Write(jsonEvent)
+		response.Write(jsonMessage)
 		return
 	}
 }
@@ -58,6 +59,7 @@ func publishHandler(response http.ResponseWriter, request *http.Request) {
 }
 
 func main() {
+	runtime.GOMAXPROCS(8)
 	http.HandleFunc("/subscribe", subscriptionHandler)
 	http.HandleFunc("/publish", publishHandler)
 	err := http.ListenAndServe(":3000", nil)
