@@ -67,3 +67,12 @@ func (topic *Topic) GetSubscription(name string, ttl time.Duration) *Subscriptio
 	topic.Subscriptions[name] = subscription
 	return subscription
 }
+
+// Returns all of the topic's cached data.
+func (topic *Topic) FetchData() []*Message {
+	messages := make([]*Message, 0, len(topic.Data))
+	for _, message := range topic.Data {
+		messages = append(messages, message)
+	}
+	return messages
+}

@@ -33,7 +33,7 @@ func subscriptionHandler(response http.ResponseWriter, request *http.Request) {
 	case <-timeoutTicker.C:
 		response.WriteHeader(http.StatusOK)
 		return
-	case message := <-subscription.ResponseChannel:
+	case message := <-subscription.Response:
 		// Batching would be good to have here, otherwise we'll
 		// have to perform one request per message.
 		jsonMessage, err := json.Marshal(message)
