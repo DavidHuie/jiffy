@@ -45,7 +45,9 @@ subscription := topic.GetSubscription("my-id", 60*time.Second)
 Note: the subscription can be reused by a consumer if the subscription
 is remade with the same parameters before the TTL expires.
 
-To fetch a message published to the topic, listen on the subscription's
+## Receiving messages
+
+To receive messages published to the topic, listen on the subscription's
 response channel:
 
 ```go
