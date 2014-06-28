@@ -20,7 +20,7 @@ func subscriptionHandler(response http.ResponseWriter, request *http.Request) {
 	sessionID := request.Form.Get("id")
 
 	topic := jiffy.GetTopic(topicName)
-	subscription := topic.GetSubscription(sessionID)
+	subscription := topic.GetSubscription(sessionID, 60*time.Second)
 
 	log.Printf("Subscription request: Id=%v TopicName=%v", sessionID, topicName)
 
@@ -53,7 +53,7 @@ func publishHandler(response http.ResponseWriter, request *http.Request) {
 	topic := jiffy.GetTopic(topicName)
 	messagePayload := request.Form.Get("message")
 	message := jiffy.NewMessage("asdfjk;l", messagePayload)
-	topic.RecordAndPublish(message)
+	topic.RecordAndPublish(message, 60*time.Second)
 	response.WriteHeader(http.StatusOK)
 }
 

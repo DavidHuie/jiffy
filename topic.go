@@ -61,7 +61,6 @@ func (topic *Topic) GetSubscription(name string, ttl time.Duration) *Subscriptio
 			return subscription
 		default:
 			// We're too late
-			break
 		}
 	}
 
