@@ -5,6 +5,11 @@
 In-process pub/sub in Go. Use this package to add one-to-many messaging
 to your Go program.
 
+## Features
+
+* Subscriptions and cached messages have TTLs.
+* Topics without subscribers are cleaned automatically.
+
 ## Getting the package
 
 ```shell
@@ -62,14 +67,14 @@ newMessage := jiffy.NewMessage("my-message-key", "Hello!", time.Minute)
 To publish a message to all subscribers of a topic:
 
 ```go
-topic.Publish(newMessage)
+subscription.Topic.Publish(newMessage)
 ```
 
 To publish a message to all subscribers of a topic and cache within the
 message's TTL:
 
 ```go
-topic.RecordAndPublish(newMessage)
+subscription.Topic.RecordAndPublish(newMessage)
 ```
 
 Note: only one message per message name is cached in a topic, resulting in

@@ -9,7 +9,7 @@ var (
 	// The maximum number of messages to buffer in a subscription.
 	ResponseBufferSize = 100
 
-	// The wait before timing a publish.
+	// The wait before timing out a publish.
 	PublishTimeout = 10 * time.Minute
 )
 
