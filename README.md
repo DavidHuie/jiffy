@@ -26,7 +26,7 @@ topic := jiffy.GetTopic("my-topic")
 To receive all cached messages from a topic:
 
 ```go
-messages := topic.CachedData()
+messages := topic.CachedMessages()
 ```
 
 ## Creating subscriptions
