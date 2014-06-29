@@ -2,7 +2,6 @@ package jiffy
 
 import (
 	"sync"
-	"time"
 )
 
 type Registry struct {
@@ -10,38 +9,37 @@ type Registry struct {
 	topicMutex sync.Mutex
 }
 
-func CreateRegistry() *Registry {
+func NewRegistry() *Registry {
 	return &Registry{
 		make(map[string]*Topic),
 		sync.Mutex{},
 	}
 }
 
-// Creates a topic on the registry if it doesn't exist
-// and returns it.
+// Creates a topic from the registry, creating one if it didn't
+// exist.
 func (registry *Registry) GetTopic(name string) *Topic {
 	registry.topicMutex.Lock()
 	defer registry.topicMutex.Unlock()
+
 	if topic, ok := registry.Topics[name]; ok {
 		return topic
 	}
-	registry.Topics[name] = CreateTopic(name)
+	registry.Topics[name] = NewTopic(name)
 	return registry.Topics[name]
 }
 
-// In intervals, subscriptionless topics are deleted from the registry.
-func (registry *Registry) CleanTopics(interval time.Duration) {
-	ticker := time.NewTicker(interval)
-	for {
-		<-ticker.C
-		for topicName, topic := range registry.Topics {
-			go func(name string, topic *Topic, registry *Registry) {
-				registry.topicMutex.Lock()
-				defer registry.topicMutex.Unlock()
-				if len(topic.Subscriptions) == 0 {
-					delete(registry.Topics, topicName)
-				}
-			}(topicName, topic, registry)
+// Cleans all expired data from the registry.
+func (registry *Registry) Clean() {
+	for topicName, topic := range registry.Topics {
+		topic.CleanExpiredSubscriptions()
+		topic.CleanExpiredCachedMessages()
+
+		// Clean topics without subscriptions.
+		registry.topicMutex.Lock()
+		if len(topic.Subscriptions) == 0 {
+			delete(registry.Topics, topicName)
 		}
+		registry.topicMutex.Unlock()
 	}
 }

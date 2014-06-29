@@ -5,8 +5,11 @@ import (
 )
 
 var (
-	registry      *Registry
-	cleanInterval = time.Minute
+	registry *Registry
+
+	// How often to clean expired messages, expired subscriptions,
+	// and subscription-less topics.
+	cleanInterval = 10 * time.Second
 )
 
 // Returns a topic from the global registry.
@@ -15,6 +18,14 @@ func GetTopic(name string) *Topic {
 }
 
 func init() {
-	registry = CreateRegistry()
-	go registry.CleanTopics(cleanInterval)
+	registry = NewRegistry()
+
+	// Periodically clean the registry.
+	go func() {
+		ticker := time.NewTicker(cleanInterval)
+		for {
+			<-ticker.C
+			registry.Clean()
+		}
+	}()
 }

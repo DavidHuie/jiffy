@@ -10,7 +10,7 @@ import (
 type Topic struct {
 	Name          string
 	Subscriptions map[string]*Subscription
-	Data          map[string]*Message
+	Messages      map[string]*Message
 	uuid          string
 	// Mutex for creating and destroying subscriptions.
 	subscriptionMutex sync.Mutex
@@ -18,7 +18,7 @@ type Topic struct {
 	messageMutex sync.Mutex
 }
 
-func CreateTopic(name string) *Topic {
+func NewTopic(name string) *Topic {
 	return &Topic{
 		name,
 		make(map[string]*Subscription),
@@ -43,20 +43,42 @@ func (topic *Topic) Publish(message *Message) {
 
 // Records a message to the topic's cache.
 func (topic *Topic) Record(message *Message) {
-	topic.messageMutex.Lock()
-	defer topic.messageMutex.Unlock()
-	topic.Data[message.Name] = message
+	topic.Messages[message.Name] = message
 }
 
 // Returns all of the topic's cached data.
-func (topic *Topic) CachedData() []*Message {
-	messages := make([]*Message, 0, len(topic.Data))
-	for _, message := range topic.Data {
+func (topic *Topic) CachedMessages() []*Message {
+	messages := make([]*Message, 0, len(topic.Messages))
+	for _, message := range topic.Messages {
+		topic.messageMutex.Lock()
 		if !message.Expired() {
 			messages = append(messages, message)
 		}
+		topic.messageMutex.Unlock()
 	}
 	return messages
+}
+
+// Destroys expired cached messages.
+func (topic *Topic) CleanExpiredCachedMessages() {
+	for _, message := range topic.Messages {
+		topic.messageMutex.Lock()
+		if message.Expired() {
+			delete(topic.Messages, message.Name)
+		}
+		topic.messageMutex.Unlock()
+	}
+}
+
+// Destroys expired subscriptions.
+func (topic *Topic) CleanExpiredSubscriptions() {
+	for _, subscription := range topic.Subscriptions {
+		topic.subscriptionMutex.Lock()
+		if subscription.Expired() {
+			delete(topic.Subscriptions, subscription.Name)
+		}
+		topic.subscriptionMutex.Unlock()
+	}
 }
 
 // Publishes a message and stores it in the topic.
@@ -73,6 +95,7 @@ func (topic *Topic) GetSubscription(name string, ttl time.Duration) *Subscriptio
 
 	if subscription, ok := topic.Subscriptions[name]; ok {
 		subscription.ExtendExpiration(ttl)
+		return subscription
 	}
 
 	subscription := NewSubscription(name, topic, ttl)

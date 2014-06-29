@@ -59,7 +59,5 @@ func (subscription *Subscription) Active() bool {
 
 // Resubscribes a subscription to its configured topic.
 func (subscription *Subscription) Activate() {
-	subscription.Topic.subscriptionMutex.Lock()
 	subscription.Topic.Subscriptions[subscription.Name] = subscription
-	subscription.Topic.subscriptionMutex.Unlock()
 }
