@@ -42,6 +42,7 @@ func (topic *Topic) Publish(message *Message) {
 func (topic *Topic) Record(message *Message, ttl time.Duration) {
 	topic.messageMutex.Lock()
 	defer topic.messageMutex.Unlock()
+
 	topic.Data[message.Name] = message
 	go message.QueueExpiration(topic, ttl)
 }
@@ -68,15 +69,8 @@ func (topic *Topic) GetSubscription(name string, ttl time.Duration) *Subscriptio
 	defer topic.subscriptionMutex.Unlock()
 
 	if subscription, ok := topic.Subscriptions[name]; ok {
-		select {
-		case subscription.expireChan <- cancelTTL:
-			// If we were able to cancel successfully,
-			// just restart the expiration.
-			go subscription.QueueExpiration(ttl)
-			return subscription
-		default:
-			// We're too late
-		}
+		subscription.ExtendExpiration(ttl)
+		return subscription
 	}
 
 	subscription := NewSubscription(name, topic, ttl)

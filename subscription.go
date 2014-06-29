@@ -1,6 +1,7 @@
 package jiffy
 
 import (
+	"sync"
 	"time"
 )
 
@@ -15,11 +16,12 @@ var (
 )
 
 type Subscription struct {
-	Name       string
-	Topic      *Topic
-	Response   chan *Message
-	expireChan chan int
-	uuid       string
+	Name        string
+	Topic       *Topic
+	Response    chan *Message
+	expireChan  chan int
+	expireMutex sync.Mutex
+	uuid        string
 }
 
 func NewSubscription(name string, topic *Topic, ttl time.Duration) *Subscription {
@@ -28,6 +30,7 @@ func NewSubscription(name string, topic *Topic, ttl time.Duration) *Subscription
 		topic,
 		make(chan *Message, ResponseBufferSize),
 		make(chan int),
+		sync.Mutex{},
 		UUID(),
 	}
 	go subscription.QueueExpiration(ttl)
@@ -43,17 +46,36 @@ func (subscription *Subscription) Publish(message *Message) {
 func (subscription *Subscription) Expire() {
 	subscription.Topic.subscriptionMutex.Lock()
 	defer subscription.Topic.subscriptionMutex.Unlock()
+
 	if subscription.Active() {
 		delete(subscription.Topic.Data, subscription.Name)
 	}
 }
 
+func (subscription *Subscription) ExtendExpiration(ttl time.Duration) {
+	select {
+	case subscription.expireChan <- cancelTTL:
+		// Do nothing if we can cancel.
+	default:
+		// Cycle mutex to ensure that expiration goroutine
+		// has finished.
+		subscription.expireMutex.Lock()
+		subscription.expireMutex.Unlock()
+	}
+	go subscription.QueueExpiration(ttl)
+}
+
 // Queues a subscription for deletion after the configured TTL.
 func (subscription *Subscription) QueueExpiration(ttl time.Duration) {
+	subscription.expireMutex.Lock()
+	defer subscription.expireMutex.Unlock()
+
 	ticker := time.NewTicker(ttl)
 	select {
 	case <-ticker.C:
-		subscription.Expire()
+		if subscription.Active() {
+			subscription.Expire()
+		}
 	case <-subscription.expireChan:
 		return
 	}
