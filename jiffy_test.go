@@ -24,19 +24,25 @@ func TestGetTopic(t *testing.T) {
 	}
 }
 
-func TestTopicFetchData(t *testing.T) {
+func TestTopicCachedData(t *testing.T) {
 	topic := GetTopic("test_topic2")
 	message1 := NewMessage("test-name1", "my message1")
 	message2 := NewMessage("test-name2", "my message2")
-	topic.Record(message1, time.Minute)
-	topic.Record(message2, time.Minute)
+	topic.Record(message1, 50*time.Millisecond)
+	topic.Record(message2, 50*time.Millisecond)
 
-	messages := topic.FetchData()
+	messages := topic.CachedData()
 	if len(messages) != 2 {
 		t.Errorf("Invalid number of messages returned")
 	}
 	if (messages[0] != message1) || (messages[1] != message2) {
 		t.Errorf("Invalid messages returned")
+	}
+
+	time.Sleep(100 * time.Millisecond)
+	messages = topic.CachedData()
+	if numMsgs := len(messages); numMsgs != 0 {
+		t.Errorf("Invalid number of messages returned: %v", numMsgs)
 	}
 }
 
@@ -63,7 +69,7 @@ func TestTopicRecordAndPublish(t *testing.T) {
 	message := NewMessage("test-name1", "my message1")
 	topic.RecordAndPublish(message, time.Minute)
 
-	messages := topic.FetchData()
+	messages := topic.CachedData()
 	if len(messages) != 1 {
 		t.Errorf("Invalid number of messages returned: %v", len(messages))
 	}
@@ -76,5 +82,42 @@ func TestTopicRecordAndPublish(t *testing.T) {
 
 	if (msg1 != message) || (msg2 != message) {
 		t.Errorf("Invalid messages returned to subscribers")
+	}
+}
+
+func TestSubExpire(t *testing.T) {
+	topic := GetTopic("test_topic5")
+	sub := topic.GetSubscription("sub", 100*time.Millisecond)
+	time.Sleep(150 * time.Millisecond)
+	if sub.Active() != false {
+		t.Errorf("Subscription should be inactive")
+	}
+}
+
+func TestSubExtendExpiration(t *testing.T) {
+	topic := GetTopic("test_topic6")
+	sub := topic.GetSubscription("sub", 100*time.Millisecond)
+
+	// Sleep so that the expiration goroutine is queued.
+	// TODO: take this out.
+	time.Sleep(10 * time.Millisecond)
+
+	if status := sub.Active(); status != true {
+		t.Errorf("Subscription should be active, got %v", status)
+	}
+
+	// TODO: ensure that subscription expirations are extendable
+	// immediately after creating them.
+	sub.ExtendExpiration(300 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
+
+	if status := sub.Active(); status != true {
+		t.Errorf("Subscription should be active, got %v", status)
+	}
+
+	time.Sleep(150 * time.Millisecond)
+
+	if status := sub.Active(); status != false {
+		t.Errorf("Subscription should be inactive, got %v", status)
 	}
 }

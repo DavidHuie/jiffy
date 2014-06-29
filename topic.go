@@ -48,7 +48,7 @@ func (topic *Topic) Record(message *Message, ttl time.Duration) {
 }
 
 // Returns all of the topic's cached data.
-func (topic *Topic) FetchData() []*Message {
+func (topic *Topic) CachedData() []*Message {
 	messages := make([]*Message, 0, len(topic.Data))
 	for _, message := range topic.Data {
 		messages = append(messages, message)

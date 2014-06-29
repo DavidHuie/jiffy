@@ -43,12 +43,12 @@ func (subscription *Subscription) Publish(message *Message) {
 }
 
 // Deletes the subscription from its topic.
-func (subscription *Subscription) Expire() {
+func (subscription *Subscription) expire() {
 	subscription.Topic.subscriptionMutex.Lock()
 	defer subscription.Topic.subscriptionMutex.Unlock()
 
 	if subscription.Active() {
-		delete(subscription.Topic.Data, subscription.Name)
+		delete(subscription.Topic.Subscriptions, subscription.Name)
 	}
 }
 
@@ -62,6 +62,11 @@ func (subscription *Subscription) ExtendExpiration(ttl time.Duration) {
 		subscription.expireMutex.Lock()
 		subscription.expireMutex.Unlock()
 	}
+
+	subscription.Topic.subscriptionMutex.Lock()
+	subscription.Topic.Subscriptions[subscription.Name] = subscription
+	subscription.Topic.subscriptionMutex.Unlock()
+
 	go subscription.QueueExpiration(ttl)
 }
 
@@ -74,7 +79,7 @@ func (subscription *Subscription) QueueExpiration(ttl time.Duration) {
 	select {
 	case <-ticker.C:
 		if subscription.Active() {
-			subscription.Expire()
+			subscription.expire()
 		}
 	case <-subscription.expireChan:
 		return
@@ -83,7 +88,7 @@ func (subscription *Subscription) QueueExpiration(ttl time.Duration) {
 
 // Returns true if the subscription is active on a topic.
 func (subscription *Subscription) Active() bool {
-	if topicSubscription, ok := subscription.Topic.Data[subscription.Name]; ok {
+	if topicSubscription, ok := subscription.Topic.Subscriptions[subscription.Name]; ok {
 		return topicSubscription.uuid == subscription.uuid
 	}
 	return false
