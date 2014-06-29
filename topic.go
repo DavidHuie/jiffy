@@ -11,6 +11,7 @@ type Topic struct {
 	Name          string
 	Subscriptions map[string]*Subscription
 	Messages      map[string]*Message
+	registry      *Registry
 	uuid          string
 	// Mutex for creating and destroying subscriptions.
 	subscriptionMutex sync.Mutex
@@ -18,11 +19,12 @@ type Topic struct {
 	messageMutex sync.Mutex
 }
 
-func NewTopic(name string) *Topic {
+func NewTopic(name string, registry *Registry) *Topic {
 	return &Topic{
 		name,
 		make(map[string]*Subscription),
 		make(map[string]*Message),
+		registry,
 		UUID(),
 		sync.Mutex{},
 		sync.Mutex{},
@@ -94,11 +96,21 @@ func (topic *Topic) GetSubscription(name string, ttl time.Duration) *Subscriptio
 	defer topic.subscriptionMutex.Unlock()
 
 	if subscription, ok := topic.Subscriptions[name]; ok {
-		subscription.ExtendExpiration(ttl)
-		return subscription
+		err := subscription.ExtendExpiration(ttl)
+		if err != nil {
+			return subscription
+		}
 	}
 
 	subscription := NewSubscription(name, topic, ttl)
 	topic.Subscriptions[name] = subscription
 	return subscription
+}
+
+// Returns true if the topic is active on its registry.
+func (topic *Topic) Active() bool {
+	if t, ok := topic.registry.Topics[topic.Name]; ok {
+		return (t.uuid == topic.uuid)
+	}
+	return false
 }

@@ -25,7 +25,7 @@ func (registry *Registry) GetTopic(name string) *Topic {
 	if topic, ok := registry.Topics[name]; ok {
 		return topic
 	}
-	registry.Topics[name] = NewTopic(name)
+	registry.Topics[name] = NewTopic(name, registry)
 	return registry.Topics[name]
 }
 

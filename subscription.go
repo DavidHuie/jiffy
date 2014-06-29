@@ -1,6 +1,7 @@
 package jiffy
 
 import (
+	"errors"
 	"time"
 )
 
@@ -50,21 +51,30 @@ func (subscription *Subscription) Expired() bool {
 	return time.Now().After(subscription.expireAt)
 }
 
+var (
+	ExpiredSubscription = errors.New("Subscription is expired")
+	TopicExpired        = errors.New("Topic for subscription has expired")
+)
+
 // Extends the subscription's expiration by the input TTL.
-func (subscription *Subscription) ExtendExpiration(ttl time.Duration) {
-	subscription.Activate()
+func (subscription *Subscription) ExtendExpiration(ttl time.Duration) error {
+	if !subscription.Active() {
+		if !subscription.Topic.Active() {
+			return TopicExpired
+		}
+		return ExpiredSubscription
+	}
 	subscription.expireAt = time.Now().Add(ttl)
+	return nil
 }
 
 // Returns true if the subscription is active on a topic.
 func (subscription *Subscription) Active() bool {
+	if subscription.Expired() || !subscription.Topic.Active() {
+		return false
+	}
 	if topicSubscription, ok := subscription.Topic.Subscriptions[subscription.Name]; ok {
-		return (topicSubscription.uuid == subscription.uuid) && !subscription.Expired()
+		return topicSubscription.uuid == subscription.uuid
 	}
 	return false
-}
-
-// Resubscribes a subscription to its configured topic.
-func (subscription *Subscription) Activate() {
-	subscription.Topic.Subscriptions[subscription.Name] = subscription
 }
