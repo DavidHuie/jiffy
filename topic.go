@@ -96,21 +96,11 @@ func (topic *Topic) GetSubscription(name string, ttl time.Duration) *Subscriptio
 	defer topic.subscriptionMutex.Unlock()
 
 	if subscription, ok := topic.Subscriptions[name]; ok {
-		err := subscription.ExtendExpiration(ttl)
-		if err != nil {
-			return subscription
-		}
+		subscription.ExtendExpiration(ttl)
+		return subscription
 	}
 
 	subscription := NewSubscription(name, topic, ttl)
 	topic.Subscriptions[name] = subscription
 	return subscription
-}
-
-// Returns true if the topic is active on its registry.
-func (topic *Topic) Active() bool {
-	if t, ok := topic.registry.Topics[topic.Name]; ok {
-		return (t.uuid == topic.uuid)
-	}
-	return false
 }

@@ -53,15 +53,11 @@ func (subscription *Subscription) Expired() bool {
 
 var (
 	ExpiredSubscription = errors.New("Subscription is expired")
-	TopicExpired        = errors.New("Topic for subscription has expired")
 )
 
 // Extends the subscription's expiration by the input TTL.
 func (subscription *Subscription) ExtendExpiration(ttl time.Duration) error {
 	if !subscription.Active() {
-		if !subscription.Topic.Active() {
-			return TopicExpired
-		}
 		return ExpiredSubscription
 	}
 	subscription.expireAt = time.Now().Add(ttl)
@@ -70,7 +66,7 @@ func (subscription *Subscription) ExtendExpiration(ttl time.Duration) error {
 
 // Returns true if the subscription is active on a topic.
 func (subscription *Subscription) Active() bool {
-	if subscription.Expired() || !subscription.Topic.Active() {
+	if subscription.Expired() {
 		return false
 	}
 	if topicSubscription, ok := subscription.Topic.Subscriptions[subscription.Name]; ok {

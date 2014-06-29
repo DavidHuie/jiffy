@@ -123,6 +123,7 @@ func TestSubExtendExpiration(t *testing.T) {
 	if status := sub.Active(); status != false {
 		t.Errorf("Subscription should be inactive, got %v", status)
 	}
+
 	if err := sub.ExtendExpiration(20 * time.Millisecond); err != ExpiredSubscription {
 		t.Errorf("Extending expiration should throw error")
 	}
@@ -160,26 +161,5 @@ func TestMessageClean(t *testing.T) {
 	messages = topic.CachedMessages()
 	if len(messages) != 0 {
 		t.Errorf("Message should be expired")
-	}
-}
-
-func TestRegistryClean(t *testing.T) {
-	registry := NewRegistry()
-	topic := registry.GetTopic("test_topic9")
-	sub := topic.GetSubscription("sub", 10*time.Millisecond)
-
-	if len(registry.Topics) != 1 {
-		t.Errorf("Topic should be present")
-	}
-
-	time.Sleep(10 * time.Millisecond)
-	registry.Clean()
-
-	if len(registry.Topics) != 0 {
-		t.Errorf("Topic should be cleaned")
-	}
-
-	if err := sub.ExtendExpiration(time.Second); err != TopicExpired {
-		t.Errorf("TopicExpired error should have been thrown")
 	}
 }

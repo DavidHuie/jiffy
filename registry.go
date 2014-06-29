@@ -31,15 +31,9 @@ func (registry *Registry) GetTopic(name string) *Topic {
 
 // Cleans all expired data from the registry.
 func (registry *Registry) Clean() {
-	for topicName, topic := range registry.Topics {
+	for _, topic := range registry.Topics {
 		topic.CleanExpiredSubscriptions()
 		topic.CleanExpiredCachedMessages()
 
-		// Clean topics without subscriptions.
-		registry.topicMutex.Lock()
-		if len(topic.Subscriptions) == 0 {
-			delete(registry.Topics, topicName)
-		}
-		registry.topicMutex.Unlock()
 	}
 }

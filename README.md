@@ -8,7 +8,6 @@ to your Go program.
 ## Features
 
 * Subscriptions and cached messages have TTLs.
-* Topics without subscribers are cleaned automatically.
 
 ## Getting the package
 
