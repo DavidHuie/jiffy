@@ -53,8 +53,8 @@ func publishHandler(response http.ResponseWriter, request *http.Request) {
 	topicName := request.Form.Get("topic")
 	topic := jiffy.GetTopic(topicName)
 	messagePayload := request.Form.Get("message")
-	message := jiffy.NewMessage("asdfjk;l", messagePayload)
-	topic.RecordAndPublish(message, 60*time.Second)
+	message := jiffy.NewMessage("asdfjk;l", messagePayload, time.Minute)
+	topic.RecordAndPublish(message)
 	response.WriteHeader(http.StatusOK)
 }
 

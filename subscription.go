@@ -34,13 +34,13 @@ func (subscription *Subscription) Publish(message *Message) {
 }
 
 // Deletes the subscription from its topic.
-func (subscription *Subscription) expire() {
-	subscription.Topic.subscriptionMutex.Lock()
-	defer subscription.Topic.subscriptionMutex.Unlock()
+func (subscription *Subscription) Expire() {
+	subscription.expireAt = time.Now()
+}
 
-	if subscription.Active() {
-		delete(subscription.Topic.Subscriptions, subscription.Name)
-	}
+// Expires the subscription.
+func (subscription *Subscription) Expired() bool {
+	return time.Now().After(subscription.expireAt)
 }
 
 // Extends the subscription's expiration by the input TTL.
@@ -55,10 +55,6 @@ func (subscription *Subscription) Active() bool {
 		return (topicSubscription.uuid == subscription.uuid) && !subscription.Expired()
 	}
 	return false
-}
-
-func (subscription *Subscription) Expired() bool {
-	return time.Now().After(subscription.expireAt)
 }
 
 // Resubscribes a subscription to its configured topic.
