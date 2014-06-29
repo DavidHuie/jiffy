@@ -7,6 +7,9 @@ import (
 var (
 	// The maximum number of messages to buffer in a subscription.
 	ResponseBufferSize = 100
+
+	// The wait before timing a publish.
+	PublishTimeout = 10 * time.Minute
 )
 
 type Subscription struct {
@@ -30,7 +33,11 @@ func NewSubscription(name string, topic *Topic, ttl time.Duration) *Subscription
 
 // Publishes a message to the subscription.
 func (subscription *Subscription) Publish(message *Message) {
-	subscription.Response <- message
+	ticker := time.NewTicker(PublishTimeout)
+	select {
+	case subscription.Response <- message:
+	case <-ticker.C:
+	}
 }
 
 // Deletes the subscription from its topic.
