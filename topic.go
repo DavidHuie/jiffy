@@ -60,7 +60,7 @@ func (topic *Topic) CachedData() []*Message {
 }
 
 // Publishes a message and stores it in the topic.
-func (topic *Topic) RecordAndPublish(message *Message, ttl time.Duration) {
+func (topic *Topic) RecordAndPublish(message *Message) {
 	topic.Record(message)
 	go topic.Publish(message)
 }

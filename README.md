@@ -65,10 +65,11 @@ To publish a message to all subscribers of a topic:
 topic.Publish(newMessage)
 ```
 
-To publish a message to all subscribers of a topic and cache it with a TTL:
+To publish a message to all subscribers of a topic and cache within the
+message's TTL:
 
 ```go
-topic.RecordAndPublish(newMessage, time.Minute)
+topic.RecordAndPublish(newMessage)
 ```
 
 Note: only one message per message name is cached in a topic, resulting in

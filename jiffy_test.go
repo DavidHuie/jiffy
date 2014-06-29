@@ -67,7 +67,7 @@ func TestTopicRecordAndPublish(t *testing.T) {
 	sub1 := topic.GetSubscription("sub1", time.Minute)
 	sub2 := topic.GetSubscription("sub2", time.Minute)
 	message := NewMessage("test-name1", "my message1", time.Minute)
-	topic.RecordAndPublish(message, time.Minute)
+	topic.RecordAndPublish(message)
 
 	messages := topic.CachedData()
 	if len(messages) != 1 {
