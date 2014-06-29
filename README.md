@@ -35,7 +35,7 @@ Create a subscription by using a unique name specific to the consumer and
 a TTL that will determine when the subscription is destroyed:
 
 ```go
-subscription := topic.GetSubscription("my-id", 60*time.Second)
+subscription := topic.GetSubscription("my-id", time.Minute)
 ```
 
 Note: the subscription can be reused by a consumer if the subscription
@@ -52,11 +52,11 @@ message := <-subscription.Response
 
 ## Publishing messages
 
-To publish a message to the topic, first create message with a name and a
-payload:
+To publish a message to the topic, first create message with a name, a
+payload, and a TTL:
 
 ```go
-newMessage := jiffy.NewMessage("my-message-key", "Hello!")
+newMessage := jiffy.NewMessage("my-message-key", "Hello!", time.Minute)
 ```
 
 To publish a message to all subscribers of a topic:
@@ -68,7 +68,7 @@ topic.Publish(newMessage)
 To publish a message to all subscribers of a topic and cache it with a TTL:
 
 ```go
-topic.RecordAndPublish(newMessage, 60*time.Second)
+topic.RecordAndPublish(newMessage, time.Minute)
 ```
 
 Note: only one message per message name is cached in a topic, resulting in

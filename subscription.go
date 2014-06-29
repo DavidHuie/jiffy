@@ -1,7 +1,6 @@
 package jiffy
 
 import (
-	"sync"
 	"time"
 )
 
@@ -11,12 +10,11 @@ var (
 )
 
 type Subscription struct {
-	Name        string
-	Topic       *Topic
-	Response    chan *Message
-	expireChan  chan time.Duration
-	expireMutex sync.Mutex
-	uuid        string
+	Name     string
+	Topic    *Topic
+	Response chan *Message
+	uuid     string
+	expireAt time.Time
 }
 
 func NewSubscription(name string, topic *Topic, ttl time.Duration) *Subscription {
@@ -24,11 +22,9 @@ func NewSubscription(name string, topic *Topic, ttl time.Duration) *Subscription
 		name,
 		topic,
 		make(chan *Message, ResponseBufferSize),
-		make(chan time.Duration),
-		sync.Mutex{},
 		UUID(),
+		time.Now().Add(ttl),
 	}
-	go subscription.QueueExpiration(ttl)
 	return subscription
 }
 
@@ -47,39 +43,22 @@ func (subscription *Subscription) expire() {
 	}
 }
 
+// Extends the subscription's expiration by the input TTL.
 func (subscription *Subscription) ExtendExpiration(ttl time.Duration) {
-	subscription.expireChan <- ttl
-}
-
-// Queues a subscription for deletion after the configured TTL. The TTL can
-// be extended by sending a new one on the expireChan.
-func (subscription *Subscription) QueueExpiration(ttl time.Duration) {
-	subscription.expireMutex.Lock()
-	defer subscription.expireMutex.Unlock()
-
-	ticker := time.NewTicker(ttl)
-
-	for {
-		select {
-		case <-ticker.C:
-			if subscription.Active() {
-				subscription.expire()
-			}
-		case newTtl := <-subscription.expireChan:
-			subscription.Activate()
-			ticker = time.NewTicker(newTtl)
-		}
-		// TODO: kill this goroutine when this subscription dies.
-	}
-
+	subscription.Activate()
+	subscription.expireAt = time.Now().Add(ttl)
 }
 
 // Returns true if the subscription is active on a topic.
 func (subscription *Subscription) Active() bool {
 	if topicSubscription, ok := subscription.Topic.Subscriptions[subscription.Name]; ok {
-		return topicSubscription.uuid == subscription.uuid
+		return (topicSubscription.uuid == subscription.uuid) && !subscription.Expired()
 	}
 	return false
+}
+
+func (subscription *Subscription) Expired() bool {
+	return time.Now().After(subscription.expireAt)
 }
 
 // Resubscribes a subscription to its configured topic.

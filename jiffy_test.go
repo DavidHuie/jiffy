@@ -26,10 +26,10 @@ func TestGetTopic(t *testing.T) {
 
 func TestTopicCachedData(t *testing.T) {
 	topic := GetTopic("test_topic2")
-	message1 := NewMessage("test-name1", "my message1")
-	message2 := NewMessage("test-name2", "my message2")
-	topic.Record(message1, 50*time.Millisecond)
-	topic.Record(message2, 50*time.Millisecond)
+	message1 := NewMessage("test-name1", "my message1", 50*time.Millisecond)
+	message2 := NewMessage("test-name2", "my message2", 50*time.Millisecond)
+	topic.Record(message1)
+	topic.Record(message2)
 
 	messages := topic.CachedData()
 	if len(messages) != 2 {
@@ -48,7 +48,7 @@ func TestTopicCachedData(t *testing.T) {
 
 func TestSubscriptionResponse(t *testing.T) {
 	topic := GetTopic("test_topic3")
-	message := NewMessage("test-message", "my message")
+	message := NewMessage("test-message", "my message", time.Minute)
 	sub1 := topic.GetSubscription("sub1", time.Minute)
 	sub2 := topic.GetSubscription("sub2", time.Minute)
 
@@ -66,7 +66,7 @@ func TestTopicRecordAndPublish(t *testing.T) {
 	topic := GetTopic("test_topic4")
 	sub1 := topic.GetSubscription("sub1", time.Minute)
 	sub2 := topic.GetSubscription("sub2", time.Minute)
-	message := NewMessage("test-name1", "my message1")
+	message := NewMessage("test-name1", "my message1", time.Minute)
 	topic.RecordAndPublish(message, time.Minute)
 
 	messages := topic.CachedData()

@@ -5,30 +5,21 @@ import (
 )
 
 type Message struct {
-	Name    string
-	Payload interface{}
-	uuid    string
+	Name     string
+	Payload  interface{}
+	uuid     string
+	expireAt time.Time
 }
 
-func NewMessage(name string, payload interface{}) *Message {
+func NewMessage(name string, payload interface{}, ttl time.Duration) *Message {
 	return &Message{
 		name,
 		payload,
 		UUID(),
+		time.Now().Add(ttl),
 	}
 }
 
-// Deletes a message from it's topic after a certain amount of time.
-func (message *Message) QueueExpiration(topic *Topic, ttl time.Duration) {
-	ticker := time.NewTicker(ttl)
-	<-ticker.C
-
-	topic.messageMutex.Lock()
-	defer topic.messageMutex.Unlock()
-
-	if topicMessage, ok := topic.Data[message.Name]; ok {
-		if topicMessage.uuid == message.uuid {
-			delete(topic.Data, message.Name)
-		}
-	}
+func (message *Message) Expired() bool {
+	return time.Now().After(message.expireAt)
 }

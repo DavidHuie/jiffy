@@ -32,6 +32,9 @@ func CreateTopic(name string) *Topic {
 // Publishes a message to all subscribers.
 func (topic *Topic) Publish(message *Message) {
 	for _, subscription := range topic.Subscriptions {
+		if !subscription.Active() {
+			continue
+		}
 		go func(s *Subscription) {
 			s.Publish(message)
 		}(subscription)
@@ -39,26 +42,26 @@ func (topic *Topic) Publish(message *Message) {
 }
 
 // Records a message to the topic's cache.
-func (topic *Topic) Record(message *Message, ttl time.Duration) {
+func (topic *Topic) Record(message *Message) {
 	topic.messageMutex.Lock()
 	defer topic.messageMutex.Unlock()
-
 	topic.Data[message.Name] = message
-	go message.QueueExpiration(topic, ttl)
 }
 
 // Returns all of the topic's cached data.
 func (topic *Topic) CachedData() []*Message {
 	messages := make([]*Message, 0, len(topic.Data))
 	for _, message := range topic.Data {
-		messages = append(messages, message)
+		if !message.Expired() {
+			messages = append(messages, message)
+		}
 	}
 	return messages
 }
 
 // Publishes a message and stores it in the topic.
 func (topic *Topic) RecordAndPublish(message *Message, ttl time.Duration) {
-	topic.Record(message, ttl)
+	topic.Record(message)
 	go topic.Publish(message)
 }
 
@@ -70,7 +73,6 @@ func (topic *Topic) GetSubscription(name string, ttl time.Duration) *Subscriptio
 
 	if subscription, ok := topic.Subscriptions[name]; ok {
 		subscription.ExtendExpiration(ttl)
-		return subscription
 	}
 
 	subscription := NewSubscription(name, topic, ttl)
