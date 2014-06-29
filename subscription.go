@@ -8,9 +8,9 @@ import (
 var (
 	// The maximum number of messages to buffer in a subscription.
 	ResponseBufferSize = 100
-
 	// The wait before timing out a publish.
-	PublishTimeout = 10 * time.Minute
+	PublishTimeout      = 10 * time.Minute
+	ExpiredSubscription = errors.New("Subscription is expired")
 )
 
 type Subscription struct {
@@ -50,10 +50,6 @@ func (subscription *Subscription) Expire() {
 func (subscription *Subscription) Expired() bool {
 	return time.Now().After(subscription.expireAt)
 }
-
-var (
-	ExpiredSubscription = errors.New("Subscription is expired")
-)
 
 // Extends the subscription's expiration by the input TTL.
 func (subscription *Subscription) ExtendExpiration(ttl time.Duration) error {
