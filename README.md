@@ -1,5 +1,7 @@
 # Jiffy
 
+[![Build Status](https://travis-ci.org/DavidHuie/jiffy.svg?branch=master)](https://travis-ci.org/DavidHuie/jiffy)
+
 In-process pub/sub in Go. Use this package to add one-to-many messaging
 to your Go program.
 

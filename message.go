@@ -18,8 +18,7 @@ func NewMessage(name string, payload interface{}) *Message {
 	}
 }
 
-// Queues a message for deletion from it's topic after
-// the configured TTL.
+// Deletes a message from it's topic after a certain amount of time.
 func (message *Message) QueueExpiration(topic *Topic, ttl time.Duration) {
 	ticker := time.NewTicker(ttl)
 	<-ticker.C

@@ -98,16 +98,10 @@ func TestSubExtendExpiration(t *testing.T) {
 	topic := GetTopic("test_topic6")
 	sub := topic.GetSubscription("sub", 100*time.Millisecond)
 
-	// Sleep so that the expiration goroutine is queued.
-	// TODO: take this out.
-	time.Sleep(10 * time.Millisecond)
-
 	if status := sub.Active(); status != true {
 		t.Errorf("Subscription should be active, got %v", status)
 	}
 
-	// TODO: ensure that subscription expirations are extendable
-	// immediately after creating them.
 	sub.ExtendExpiration(300 * time.Millisecond)
 	time.Sleep(200 * time.Millisecond)
 

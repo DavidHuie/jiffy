@@ -5,11 +5,6 @@ import (
 	"time"
 )
 
-const (
-	cancelTTL = iota
-	extendTTL
-)
-
 var (
 	// The maximum number of messages to buffer in a subscription.
 	ResponseBufferSize = 100
@@ -19,7 +14,7 @@ type Subscription struct {
 	Name        string
 	Topic       *Topic
 	Response    chan *Message
-	expireChan  chan int
+	expireChan  chan time.Duration
 	expireMutex sync.Mutex
 	uuid        string
 }
@@ -29,7 +24,7 @@ func NewSubscription(name string, topic *Topic, ttl time.Duration) *Subscription
 		name,
 		topic,
 		make(chan *Message, ResponseBufferSize),
-		make(chan int),
+		make(chan time.Duration),
 		sync.Mutex{},
 		UUID(),
 	}
@@ -53,37 +48,30 @@ func (subscription *Subscription) expire() {
 }
 
 func (subscription *Subscription) ExtendExpiration(ttl time.Duration) {
-	select {
-	case subscription.expireChan <- cancelTTL:
-		// Do nothing if we can cancel.
-	default:
-		// Cycle mutex to ensure that expiration goroutine
-		// has finished.
-		subscription.expireMutex.Lock()
-		subscription.expireMutex.Unlock()
-	}
-
-	subscription.Topic.subscriptionMutex.Lock()
-	subscription.Topic.Subscriptions[subscription.Name] = subscription
-	subscription.Topic.subscriptionMutex.Unlock()
-
-	go subscription.QueueExpiration(ttl)
+	subscription.expireChan <- ttl
 }
 
-// Queues a subscription for deletion after the configured TTL.
+// Queues a subscription for deletion after the configured TTL. The TTL can
+// be extended by sending a new one on the expireChan.
 func (subscription *Subscription) QueueExpiration(ttl time.Duration) {
 	subscription.expireMutex.Lock()
 	defer subscription.expireMutex.Unlock()
 
 	ticker := time.NewTicker(ttl)
-	select {
-	case <-ticker.C:
-		if subscription.Active() {
-			subscription.expire()
+
+	for {
+		select {
+		case <-ticker.C:
+			if subscription.Active() {
+				subscription.expire()
+			}
+		case newTtl := <-subscription.expireChan:
+			subscription.Activate()
+			ticker = time.NewTicker(newTtl)
 		}
-	case <-subscription.expireChan:
-		return
+		// TODO: kill this goroutine when this subscription dies.
 	}
+
 }
 
 // Returns true if the subscription is active on a topic.
@@ -92,4 +80,11 @@ func (subscription *Subscription) Active() bool {
 		return topicSubscription.uuid == subscription.uuid
 	}
 	return false
+}
+
+// Resubscribes a subscription to its configured topic.
+func (subscription *Subscription) Activate() {
+	subscription.Topic.subscriptionMutex.Lock()
+	subscription.Topic.Subscriptions[subscription.Name] = subscription
+	subscription.Topic.subscriptionMutex.Unlock()
 }
