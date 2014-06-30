@@ -1,6 +1,7 @@
 package jiffy
 
 import (
+	"fmt"
 	"reflect"
 	"sort"
 	"testing"
@@ -161,5 +162,33 @@ func TestMessageClean(t *testing.T) {
 	messages = topic.CachedMessages()
 	if len(messages) != 0 {
 		t.Errorf("Message should be expired")
+	}
+}
+
+func BenchmarkPublishAndReceive(b *testing.B) {
+	registry := NewRegistry()
+	topic := registry.GetTopic(fmt.Sprintf("benchmark-%v", b.N))
+	subscription := topic.GetSubscription("test-sub", time.Minute)
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		msg := NewMessage("test-message", "test-payload", time.Minute)
+		subscription.Topic.Publish(msg)
+		<-subscription.Response
+	}
+}
+
+func BenchmarkPublishAndReceiveUniqueTopic(b *testing.B) {
+	registry := NewRegistry()
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		topic := registry.GetTopic(fmt.Sprintf("bench-%v", i))
+		subscription := topic.GetSubscription(fmt.Sprintf("sub-%v", i), time.Minute)
+		msg := NewMessage(fmt.Sprintf("message-%v", i), "test-payload", time.Minute)
+		subscription.Topic.Publish(msg)
+		<-subscription.Response
 	}
 }
